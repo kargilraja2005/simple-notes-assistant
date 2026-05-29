@@ -1,2 +1,1 @@
-# simple-notes-assistant
-It lets you create, edit, delete, and search notes by title, with extra features like pinning important notes to the top, a dark mode for comfortable reading, and a built-in quiz builder where you can write your own questions for any note and test yourself. 
+Simple Notes Assistant is a beginner-friendly note-taking web app built with HTML, CSS, and JavaScript on the frontend, and Python Flask with SQLite on the backend. It lets you create, edit, delete, and search notes by title, with extra features like pinning important notes to the top, a dark mode for comfortable reading, and a built-in quiz builder where you can write your own questions for any note and test yourself
