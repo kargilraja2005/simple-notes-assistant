@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Notes — SimpleNotes</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-brand">📒 SimpleNotes</a>
+  <div class="nav-right">
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="add-note.html">Add Note</a></li>
+      <li><a href="view-notes.html" class="active">My Notes</a></li>
+    </ul>
+    <button id="dark-toggle" onclick="toggleDark()">🌙</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">📂 My Notes</h1>
+      <p id="count" class="text-muted">Loading...</p>
+    </div>
+    <a href="add-note.html" class="btn btn-primary">✏️ Add Note</a>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <input type="text" id="search" placeholder="🔍 Search by title..." oninput="onSearch()"/>
+    <button class="btn btn-secondary" onclick="document.getElementById('search').value=''; load()">Clear</button>
+  </div>
+
+  <!-- Notes grid -->
+  <div id="grid" class="notes-grid"></div>
+
+</div>
+
+<!-- ===================== NOTE DETAIL MODAL ===================== -->
+<div id="view-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="v-title"></h2>
+      <button class="modal-close" onclick="closeView()">✕</button>
+    </div>
+    <p class="note-meta" id="v-meta"></p>
+    <div class="note-content-box" id="v-content"></div>
+    <div class="modal-footer" style="justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+      <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+        <button class="btn btn-amber btn-sm" id="pin-btn" onclick="pin()">📌 Pin</button>
+        <button class="btn btn-secondary btn-sm" onclick="openEdit()">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="openDelete()">🗑 Delete</button>
+      </div>
+      <div style="display:flex; gap:0.4rem;">
+        <button class="btn btn-primary btn-sm" onclick="openQuiz()">🧠 Quiz</button>
+        <button class="btn btn-secondary btn-sm" onclick="closeView()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== EDIT MODAL ===================== -->
+<div id="edit-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">✏️ Edit Note</h2>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="e-title"/>
+    </div>
+    <div class="form-group">
+      <label>Content</label>
+      <textarea id="e-content" rows="9"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" id="update-btn" onclick="saveEdit()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DELETE MODAL ===================== -->
+<div id="del-modal" class="modal-overlay">
+  <div class="modal" style="max-width:400px; text-align:center;">
+    <div style="font-size:2.5rem; margin-bottom:0.75rem;">🗑</div>
+    <h2 class="modal-title" style="margin-bottom:0.4rem;">Delete this note?</h2>
+    <p class="text-muted" style="margin-bottom:1.5rem;">This action cannot be undone.</p>
+    <div style="display:flex; gap:0.75rem; justify-content:center;">
+      <button class="btn btn-secondary" onclick="closeDel()">Cancel</button>
+      <button class="btn btn-danger" id="del-btn" onclick="confirmDelete()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== QUIZ MODAL ===================== -->
+<div id="quiz-modal" class="modal-overlay">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h2 class="modal-title">🧠 Quiz — <span id="quiz-note-title"></span></h2>
+      <button class="modal-close" onclick="closeQuiz()">✕</button>
+    </div>
+
+    <!-- Tabs: Take Quiz / Create Quiz -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-take" onclick="switchTab('take')">▶ Take Quiz</button>
+      <button class="tab-btn"        id="tab-make" onclick="switchTab('make')">➕ Create Quiz</button>
+    </div>
+
+    <!-- TAKE QUIZ TAB -->
+    <div id="panel-take" class="tab-panel active">
+      <div id="quiz-questions"></div>
+      <div id="quiz-empty" class="hidden" style="text-align:center; padding:2rem; color:var(--text-muted);">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">📭</div>
+        <p>No quiz yet for this note.</p>
+        <p style="font-size:0.85rem; margin-top:0.3rem;">Go to "Create Quiz" tab to add questions.</p>
+      </div>
+      <div id="quiz-score" class="quiz-score hidden"></div>
+      <div class="modal-footer" id="quiz-footer" style="display:none;">
+        <button class="btn btn-secondary" onclick="resetQuiz()">🔄 Try Again</button>
+        <button class="btn btn-secondary" onclick="closeQuiz()">Close</button>
+      </div>
+    </div>
+
+    <!-- CREATE QUIZ TAB -->
+    <div id="panel-make" class="tab-panel">
+      <p class="text-muted" style="margin-bottom:1rem;">Add up to 10 questions. Each needs a question, 4 options, and the correct answer.</p>
+      <div id="builder-blocks"></div>
+      <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="addQuestion()">➕ Add Question</button>
+        <button class="btn btn-danger btn-sm"    onclick="clearBuilder()">🗑 Clear All</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeQuiz()">Cancel</button>
+        <button class="btn btn-primary" id="save-quiz-btn" onclick="saveQuizQuestions()">💾 Save Quiz</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="../js/api.js"></script>
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let current  = null;   // currently open note object
+let quizData = [];     // quiz questions loaded from server
+let answers  = {};     // user's selected answers {qIndex: letter}
+let qCount   = 0;      // builder question counter
+
+// ============================================================
+// LOAD NOTES
+// ============================================================
+async function load(search = "") {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = `<p class="text-muted" style="grid-column:1/-1">Loading...</p>`;
+  try {
+    const notes = await getNotes(search);
+    document.getElementById("count").textContent = `${notes.length} note${notes.length !== 1 ? "s" : ""}`;
+
+    if (!notes.length) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <h3>No notes yet</h3>
+          <p>Start by adding your first note.</p>
+          <a href="add-note.html" class="btn btn-primary">✏️ Add a Note</a>
+        </div>`;
+      return;
+    }
+    grid.innerHTML = notes.map(renderCard).join("");
+  } catch(e) {
+    grid.innerHTML = `<p style="color:var(--red); grid-column:1/-1">Failed to load notes.</p>`;
+  }
+}
+
+function renderCard(n) {
+  const preview = n.content.length > 110 ? n.content.slice(0,110) + "…" : n.content;
+  return `
+    <div class="note-card ${n.pinned ? 'pinned' : ''}" onclick="openView(${n.id})">
+      <div class="note-card-top">
+        <div class="note-card-title">${escapeHtml(n.title)}</div>
+        ${n.pinned ? '<span class="pin-badge" title="Pinned">📌</span>' : ''}
+      </div>
+      <div class="note-card-preview">${escapeHtml(preview)}</div>
+      <div class="note-card-date">${formatDate(n.created_at)}</div>
+      <div class="note-card-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-sm btn-secondary" onclick="openView(${n.id})">Open</button>
+        <button class="btn btn-sm btn-amber"     onclick="pinNote(${n.id})">${n.pinned ? 'Unpin' : '📌 Pin'}</button>
+        <button class="btn btn-sm btn-primary"   onclick="openView(${n.id}); setTimeout(openQuiz,200)">🧠 Quiz</button>
+        <button class="btn btn-sm btn-danger"    onclick="event.stopPropagation(); quickDelete(${n.id})">🗑</button>
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+let searchTimer;
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => load(document.getElementById("search").value.trim()), 350);
+}
+
+// ============================================================
+// VIEW MODAL
+// ============================================================
+async function openView(id) {
+  try {
+    current = await getNote(id);
+    document.getElementById("v-title").textContent = current.title;
+    document.getElementById("v-meta").textContent  = `Created: ${formatDate(current.created_at)}   Updated: ${formatDate(current.updated_at)}`;
+    document.getElementById("v-content").textContent = current.content;
+    document.getElementById("pin-btn").textContent   = current.pinned ? "📌 Unpin" : "📌 Pin";
+    open("view-modal");
+  } catch(e) {}
+}
+
+function closeView() { close("view-modal"); current = null; }
+
+// ============================================================
+// PIN
+// ============================================================
+async function pin() {
+  if (!current) return;
+  try {
+    current = await togglePin(current.id);
+    document.getElementById("pin-btn").textContent = current.pinned ? "📌 Unpin" : "📌 Pin";
+    showToast(current.pinned ? "Note pinned! 📌" : "Note unpinned");
+    load();
+  } catch(e) {}
+}
+
+async function pinNote(id) {
+  try { await togglePin(id); load(); showToast("Pin updated! 📌"); } catch(e) {}
+}
+
+// ============================================================
+// EDIT MODAL
+// ============================================================
+function openEdit() {
+  if (!current) return;
+  document.getElementById("e-title").value   = current.title;
+  document.getElementById("e-content").value = current.content;
+  open("edit-modal");
+}
+
+function closeEdit() { close("edit-modal"); }
+
+async function saveEdit() {
+  const t = document.getElementById("e-title").value.trim();
+  const c = document.getElementById("e-content").value.trim();
+  if (!t || !c) { showToast("Title and content required", "error"); return; }
+  const btn = document.getElementById("update-btn");
+  setLoading(btn, true);
+  try {
+    current = await updateNote(current.id, t, c);
+    document.getElementById("v-title").textContent   = current.title;
+    document.getElementById("v-content").textContent = current.content;
+    closeEdit();
+    showToast("Note updated! ✓");
+    load();
+  } finally { setLoading(btn, false); }
+}
+
+// ============================================================
+// DELETE
+// ============================================================
+function openDelete() { open("del-modal"); }
+function closeDel()   { close("del-modal"); }
+
+async function confirmDelete() {
+  if (!current) return;
+  const btn = document.getElementById("del-btn");
+  setLoading(btn, true);
+  try {
+    await deleteNote(current.id);
+    showToast("Note deleted.");
+    closeDel(); closeView(); load();
+  } finally { setLoading(btn, false); }
+}
+
+async function quickDelete(id) {
+  if (!confirm("Delete this note?")) return;
+  try { await deleteNote(id); showToast("Note deleted."); load(); } catch(e) {}
+}
+
+// ============================================================
+// QUIZ MODAL
+// ============================================================
+async function openQuiz() {
+  if (!current) return;
+  document.getElementById("quiz-note-title").textContent = current.title;
+  answers = {}; qCount = 0;
+  switchTab("take");
+  open("quiz-modal");
+  await loadQuiz();
+}
+
+function closeQuiz() { close("quiz-modal"); }
+
+// Load and render quiz questions for "take" tab
+async function loadQuiz() {
+  try {
+    quizData = await getQuiz(current.id);
+    renderTakeQuiz();
+  } catch(e) {}
+}
+
+function renderTakeQuiz() {
+  const container = document.getElementById("quiz-questions");
+  const empty     = document.getElementById("quiz-empty");
+  const score     = document.getElementById("quiz-score");
+  const footer    = document.getElementById("quiz-footer");
+
+  score.classList.add("hidden");
+  footer.style.display = "none";
+  answers = {};
+
+  if (!quizData.length) {
+    container.innerHTML = "";
+    empty.classList.remove("hidden");
+    return;
+  }
+
+  empty.classList.add("hidden");
+  container.innerHTML = quizData.map((q, i) => `
+    <div class="quiz-question-block" id="qblock-${i}">
+      <div class="quiz-question-text">Q${i+1}. ${escapeHtml(q.question)}</div>
+      <div class="quiz-options">
+        ${["a","b","c","d"].map(l => `
+          <div class="quiz-option" id="opt-${i}-${l}" onclick="selectAnswer(${i}, '${l}', '${q.answer.toLowerCase()}')">
+            <strong>${l.toUpperCase()})</strong> ${escapeHtml(q["option_"+l])}
+          </div>`).join("")}
+      </div>
+    </div>`).join("");
+}
+
+function selectAnswer(qIdx, chosen, correct) {
+  // Only allow one answer per question
+  if (answers[qIdx] !== undefined) return;
+  answers[qIdx] = chosen;
+
+  // Highlight correct/wrong
+  ["a","b","c","d"].forEach(l => {
+    const el = document.getElementById(`opt-${qIdx}-${l}`);
+    if (l === correct) el.classList.add("correct");
+    else if (l === chosen && chosen !== correct) el.classList.add("wrong");
+    el.onclick = null; // Disable further clicks
+  });
+
+  // Show score when all answered
+  if (Object.keys(answers).length === quizData.length) showScore();
+}
+
+function showScore() {
+  const correct = quizData.filter((q, i) => answers[i] === q.answer.toLowerCase()).length;
+  const total   = quizData.length;
+  const pct     = Math.round((correct / total) * 100);
+  const score   = document.getElementById("quiz-score");
+  score.innerHTML = `🎉 You got ${correct} / ${total} correct (${pct}%)`;
+  score.classList.remove("hidden");
+  document.getElementById("quiz-footer").style.display = "flex";
+}
+
+function resetQuiz() { renderTakeQuiz(); }
+
+// ---- CREATE QUIZ TAB ----
+function switchTab(tab) {
+  document.getElementById("tab-take").classList.toggle("active", tab === "take");
+  document.getElementById("tab-make").classList.toggle("active", tab === "make");
+  document.getElementById("panel-take").classList.toggle("active", tab === "take");
+  document.getElementById("panel-make").classList.toggle("active", tab === "make");
+  if (tab === "make") loadBuilder();
+}
+
+// Load existing quiz into builder for editing
+function loadBuilder() {
+  const blocks = document.getElementById("builder-blocks");
+  blocks.innerHTML = "";
+  qCount = 0;
+  if (quizData.length) {
+    quizData.forEach(q => addQuestion({
+      question: q.question,
+      option_a: q.option_a, option_b: q.option_b,
+      option_c: q.option_c, option_d: q.option_d,
+      answer: q.answer
+    }));
+  } else {
+    addQuestion(); // Start with one empty question
+  }
+}
+
+function addQuestion(data = {}) {
+  if (qCount >= 10) { showToast("Max 10 questions allowed", "error"); return; }
+  const i = qCount++;
+  const block = document.createElement("div");
+  block.className = "quiz-builder-block";
+  block.id = `builder-${i}`;
+  block.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+      <div class="q-num">Question ${i+1}</div>
+      <button class="btn btn-danger btn-sm" onclick="removeQuestion(${i})">✕ Remove</button>
+    </div>
+    <div class="form-group" style="margin-bottom:0.5rem;">
+      <input type="text" placeholder="Enter question..." value="${escapeHtml(data.question||'')}" id="q${i}-question"/>
+    </div>
+    <div class="quiz-grid">
+      <input type="text" placeholder="Option A" value="${escapeHtml(data.option_a||'')}" id="q${i}-a"/>
+      <input type="text" placeholder="Option B" value="${escapeHtml(data.option_b||'')}" id="q${i}-b"/>
+      <input type="text" placeholder="Option C" value="${escapeHtml(data.option_c||'')}" id="q${i}-c"/>
+      <input type="text" placeholder="Option D" value="${escapeHtml(data.option_d||'')}" id="q${i}-d"/>
+    </div>
+    <div class="form-group" style="margin-top:0.5rem; margin-bottom:0;">
+      <label>Correct Answer</label>
+      <select id="q${i}-answer">
+        <option value="A" ${(data.answer||'').toUpperCase()==='A'?'selected':''}>A</option>
+        <option value="B" ${(data.answer||'').toUpperCase()==='B'?'selected':''}>B</option>
+        <option value="C" ${(data.answer||'').toUpperCase()==='C'?'selected':''}>C</option>
+        <option value="D" ${(data.answer||'').toUpperCase()==='D'?'selected':''}>D</option>
+      </select>
+    </div>`;
+  document.getElementById("builder-blocks").appendChild(block);
+}
+
+function removeQuestion(i) {
+  const el = document.getElementById(`builder-${i}`);
+  if (el) el.remove();
+}
+
+function clearBuilder() {
+  document.getElementById("builder-blocks").innerHTML = "";
+  qCount = 0;
+  addQuestion();
+}
+
+async function saveQuizQuestions() {
+  // Collect all builder blocks that still exist in DOM
+  const blocks = document.querySelectorAll(".quiz-builder-block");
+  const questions = [];
+
+  for (let i = 0; i < blocks.length; i++) {
+    const id  = blocks[i].id.replace("builder-", "");
+    const question = document.getElementById(`q${id}-question`)?.value.trim();
+    const a = document.getElementById(`q${id}-a`)?.value.trim();
+    const b = document.getElementById(`q${id}-b`)?.value.trim();
+    const c = document.getElementById(`q${id}-c`)?.value.trim();
+    const d = document.getElementById(`q${id}-d`)?.value.trim();
+    const ans = document.getElementById(`q${id}-answer`)?.value;
+
+    if (!question || !a || !b || !c || !d) {
+      showToast(`Question ${i+1} is incomplete.`, "error"); return;
+    }
+    questions.push({ question, option_a: a, option_b: b, option_c: c, option_d: d, answer: ans });
+  }
+
+  if (!questions.length) { showToast("Add at least one question.", "error"); return; }
+
+  const btn = document.getElementById("save-quiz-btn");
+  setLoading(btn, true);
+  try {
+    await saveQuiz(current.id, questions);
+    showToast(`Quiz saved! ${questions.length} questions ✓`);
+    quizData = await getQuiz(current.id);
+    switchTab("take");
+  } finally { setLoading(btn, false); }
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function open(id)  { document.getElementById(id).classList.add("open"); }
+function close(id) { document.getElementById(id).classList.remove("open"); }
+
+// Close modals when clicking background overlay
+["view-modal","edit-modal","del-modal","quiz-modal"].forEach(id => {
+  document.getElementById(id).addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+});
+
+// ============================================================
+// INIT
+// ============================================================
+initDarkMode();
+load();
+</script>
+</body>
+</html>

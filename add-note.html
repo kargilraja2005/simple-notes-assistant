@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Note — SimpleNotes</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-brand">📒 SimpleNotes</a>
+  <div class="nav-right">
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="add-note.html" class="active">Add Note</a></li>
+      <li><a href="view-notes.html">My Notes</a></li>
+    </ul>
+    <button id="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
+  </div>
+</nav>
+
+<div class="page" style="max-width:660px;">
+
+  <div class="page-header">
+    <h1 class="page-title">✏️ Add New Note</h1>
+  </div>
+
+  <div class="card">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" id="title" placeholder="e.g. Chapter 1 – Introduction" maxlength="120"/>
+    </div>
+
+    <div class="form-group">
+      <label for="content">Content</label>
+      <textarea id="content" rows="10" placeholder="Write your note here..."></textarea>
+    </div>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+      <span id="char-count" class="text-muted">0 characters</span>
+      <div style="display:flex; gap:0.5rem;">
+        <a href="view-notes.html" class="btn btn-secondary">Cancel</a>
+        <button class="btn btn-primary btn-lg" id="save-btn" onclick="save()">💾 Save Note</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success message -->
+  <div id="success" class="hidden mt-1">
+    <div class="card" style="border-color:var(--green); background:var(--green-light); text-align:center;">
+      <p style="color:var(--green); font-weight:700; margin-bottom:1rem;">✓ Note saved successfully!</p>
+      <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+        <a href="view-notes.html" class="btn btn-green">📂 View All Notes</a>
+        <button class="btn btn-secondary" onclick="reset()">✏️ Add Another</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+<script src="../js/api.js"></script>
+<script>
+  initDarkMode();
+
+  // Character count
+  document.getElementById("content").addEventListener("input", function() {
+    document.getElementById("char-count").textContent = this.value.length + " characters";
+  });
+
+  async function save() {
+    const title   = document.getElementById("title").value.trim();
+    const content = document.getElementById("content").value.trim();
+
+    if (!title)   { showToast("Please enter a title.", "error"); return; }
+    if (!content) { showToast("Please enter some content.", "error"); return; }
+
+    const btn = document.getElementById("save-btn");
+    setLoading(btn, true);
+    try {
+      await createNote(title, content);
+      showToast("Note saved! ✓");
+      document.querySelector(".card").classList.add("hidden");
+      document.getElementById("success").classList.remove("hidden");
+    } finally {
+      setLoading(btn, false);
+    }
+  }
+
+  function reset() {
+    document.getElementById("title").value = "";
+    document.getElementById("content").value = "";
+    document.getElementById("char-count").textContent = "0 characters";
+    document.querySelector(".card").classList.remove("hidden");
+    document.getElementById("success").classList.add("hidden");
+    document.getElementById("title").focus();
+  }
+
+  // Ctrl+Enter to save
+  document.addEventListener("keydown", e => { if (e.ctrlKey && e.key === "Enter") save(); });
+</script>
+</body>
+</html>
